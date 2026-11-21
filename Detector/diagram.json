@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "parts": [{ "type": "wokwi-arduino-mega", "id": "mega" }],
+  "connections": []
+}
