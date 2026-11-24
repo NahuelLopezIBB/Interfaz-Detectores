@@ -1,5 +1,11 @@
 {
   "version": 1,
-  "parts": [{ "type": "wokwi-arduino-mega", "id": "mega" }],
-  "connections": []
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp" }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "esp:26", "esp:32", "green", [] ]
+  ]
 }
