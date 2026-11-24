@@ -1,92 +1,87 @@
 #include <Arduino.h>
+#include "driver/pulse_cnt.h"
 
-volatile uint32_t cuentas[5];
-unsigned long t_anterior = 0;
 uint32_t cuentas_anterior[5];
-uint tiempoActualizacion = 1000;
-void IRAM_ATTR isr0();  //función que aumenta el contador cada vez que llega una cuenta
-void IRAM_ATTR isr1();
-void IRAM_ATTR isr2();
-void IRAM_ATTR isr3();
-void IRAM_ATTR isr4();
+unsigned long tiempoActualizacion = 250;
+unsigned long t_anterior = 0;
+const int puertos[5] = {32, 33, 27, 14, 25};
 
-void reset();
+pcnt_unit_handle_t unidad[5] = {NULL};
 
-void setup() {
+void setup()
+{
   // put your setup code here, to run once:
   Serial.begin(115200);
 
-  pinMode(32,INPUT);
-  attachInterrupt(digitalPinToInterrupt(32),isr0,RISING);
+  for (int i = 0; i < 5; i++)
+  {
+    pcnt_unit_config_t cfg_unidad = {};
+    cfg_unidad.low_limit = -1;
+    cfg_unidad.high_limit = 32767;
+    cfg_unidad.flags.accum_count = 1;
+    ESP_ERROR_CHECK(pcnt_new_unit(&cfg_unidad, &unidad[i]));
 
-  pinMode(33,INPUT);
-  attachInterrupt(digitalPinToInterrupt(33),isr1,RISING);
+    pcnt_glitch_filter_config_t filtro = {};
+    filtro.max_glitch_ns = 1000;
+    ESP_ERROR_CHECK(pcnt_unit_set_glitch_filter(unidad[i], &filtro));
 
-  pinMode(34,INPUT);
-  attachInterrupt(digitalPinToInterrupt(34),isr2,RISING);
+    pcnt_channel_handle_t canal = NULL;
+    pcnt_chan_config_t cfg_canal = {};
 
-  pinMode(35,INPUT);
-  attachInterrupt(digitalPinToInterrupt(35),isr3,RISING);
+    cfg_canal.edge_gpio_num = puertos[i];
+    cfg_canal.level_gpio_num = -1;
+    ESP_ERROR_CHECK(pcnt_new_channel(unidad[i], &cfg_canal, &canal));
 
-  pinMode(25,INPUT);
-  attachInterrupt(digitalPinToInterrupt(25),isr4,RISING);
+    ESP_ERROR_CHECK(pcnt_channel_set_edge_action(canal,
+                                                 PCNT_CHANNEL_EDGE_ACTION_INCREASE, // flanco de subida
+                                                 PCNT_CHANNEL_EDGE_ACTION_HOLD));   // flanco de bajada.
 
-  tone(26,100);
+    ESP_ERROR_CHECK(pcnt_unit_add_watch_point(unidad[i], 32767));
+    ESP_ERROR_CHECK(pcnt_unit_add_watch_point(unidad[i], -1));
+
+    ESP_ERROR_CHECK(pcnt_unit_enable(unidad[i]));
+    ESP_ERROR_CHECK(pcnt_unit_clear_count(unidad[i]));
+    ESP_ERROR_CHECK(pcnt_unit_start(unidad[i]));
+  }
+  tone(26, 50000);
+  t_anterior = millis();
 }
 
+void loop()
+{
 
-void loop() {
-  
-  if (millis()-t_anterior >= tiempoActualizacion) {
-    
+  if (millis() - t_anterior >= tiempoActualizacion)
+  {
+
     t_anterior += tiempoActualizacion;
-    noInterrupts();
-    uint32_t copia[5];
-    for (int i = 0; i<5; i++) {
-      copia[i]=cuentas[i];
-    }
-    interrupts();
+    int valor[5] = {};
     uint32_t neto[5];
-    for (int i = 0; i<5; i++) {
-      neto[i] = copia[i]- cuentas_anterior[i];
+
+    for (int i = 0; i < 5; i++)
+    {
+      ESP_ERROR_CHECK(pcnt_unit_get_count(unidad[i], &valor[i]));
+    }
+    uint32_t copia[5] = {};
+    for (int i = 0; i < 5; i++)
+    {
+      copia[i] = valor[i];
+      neto[i] = copia[i] - cuentas_anterior[i];
+
       cuentas_anterior[i] = copia[i];
     }
-    for (int i = 0; i<5; i++) {
-      if (i!=4) {
+    Serial.print(tiempoActualizacion);
+    Serial.print(",");
+    for (int i = 0; i < 5; i++)
+    {
+      if (i != 4)
+      {
         Serial.print(neto[i]);
         Serial.print(",");
-      } else {
+      }
+      else
+      {
         Serial.println(neto[i]);
       }
     }
   }
-
-}
-
-
-void isr0() {
-  cuentas[0]++;
-}
-void isr1() {
-  cuentas[1]++;
-}
-void isr2() {
-  cuentas[2]++;
-}
-
-void isr3() {
-  cuentas[3]++;
-}
-
-void isr4() {
-  cuentas[4]++;
-}
-
-void reset() {
-  noInterrupts();
-  for (int i = 0; i<5; i++) {
-    cuentas[i] = 0;
-    cuentas_anterior[i] =0;
-  }
-  interrupts();
 }
