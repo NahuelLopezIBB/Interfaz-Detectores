@@ -6,6 +6,10 @@
   "connections": [
     [ "esp:TX", "$serialMonitor:RX", "", [] ],
     [ "esp:RX", "$serialMonitor:TX", "", [] ],
-    [ "esp:26", "esp:32", "green", [] ]
+    [ "esp:26", "esp:33", "green", [] ],
+    [ "esp:26", "esp:32", "green", [] ],
+    [ "esp:26", "esp:27", "green", [] ],
+    [ "esp:26", "esp:14", "green", [] ],
+    [ "esp:26", "esp:25", "green", [] ]
   ]
 }

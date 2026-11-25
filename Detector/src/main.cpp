@@ -43,7 +43,7 @@ void setup()
     ESP_ERROR_CHECK(pcnt_unit_clear_count(unidad[i]));
     ESP_ERROR_CHECK(pcnt_unit_start(unidad[i]));
   }
-  tone(26, 50000);
+  tone(26, 100);
   t_anterior = millis();
 }
 
@@ -53,10 +53,9 @@ void loop()
   if (millis() - t_anterior >= tiempoActualizacion)
   {
 
-    t_anterior += tiempoActualizacion;
     int valor[5] = {};
     uint32_t neto[5];
-
+    t_anterior += tiempoActualizacion;
     for (int i = 0; i < 5; i++)
     {
       ESP_ERROR_CHECK(pcnt_unit_get_count(unidad[i], &valor[i]));
@@ -69,6 +68,8 @@ void loop()
 
       cuentas_anterior[i] = copia[i];
     }
+    Serial.print(t_anterior);
+    Serial.print(",");
     Serial.print(tiempoActualizacion);
     Serial.print(",");
     for (int i = 0; i < 5; i++)
